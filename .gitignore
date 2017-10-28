@@ -1,0 +1,6 @@
+# Project Directories
+/.gradle/
+/.idea/
+/build/
+/out/
+/src/test/
