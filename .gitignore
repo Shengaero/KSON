@@ -4,3 +4,7 @@
 /build/
 /out/
 /src/test/
+
+# Data Files
+*.json
+*.kson

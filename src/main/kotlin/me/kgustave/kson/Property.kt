@@ -13,11 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package me.kgustave.kson.annotation
+@file:[Suppress("Unused") JvmName("Property")]
+package me.kgustave.kson
 
-/**
- * @author Kaidan Gustave
- */
-enum class KSONType {
+import java.util.Properties
 
+fun Properties.toKSONObject(): KSONObject {
+    val kson = KSONObject()
+    if(isNotEmpty()) {
+        for((name, value) in this) {
+            // Smart cast just to be safe
+            if(name is String && value is String)
+                kson[name] = value
+        }
+    }
+    return kson
+}
+
+fun KSONObject.toProperties(): Properties {
+    val props = Properties()
+    for((key, value) in only<String>())
+        props.put(key, value)
+    return props
 }

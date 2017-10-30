@@ -17,6 +17,17 @@
 package me.kgustave.kson
 
 /**
+ * An internal exception used when errors occur, usually due to invalid or improper
+ * arguments.
+ *
+ * Not all functions in the library use this exception, for example [KSONArray.get]
+ * might throw a [IndexOutOfBoundsException] if the index provided is out of bounds.
+ *
+ * Typically the conditions this is used under are when an error *must* be thrown,
+ * either due to catching one that occurred internally or because external interactions
+ * are invalid, are when errors that will be thrown do not appropriately describe the
+ * error on their own.
+ *
  * @author Kaidan Gustave
  */
 class KSONException(override val message: String?, override val cause: Throwable?): RuntimeException(message, cause)
@@ -24,14 +35,4 @@ class KSONException(override val message: String?, override val cause: Throwable
     constructor() : this(null, null)
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(null, cause)
-}
-
-internal inline fun require(condition: Boolean, lazy: () -> String)
-{
-    if(!condition) throw KSONException(lazy())
-}
-
-internal inline fun denyIf(condition: Boolean, lazy: () -> String)
-{
-    if(condition) throw KSONException(lazy())
 }

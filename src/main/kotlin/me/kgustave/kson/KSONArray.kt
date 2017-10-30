@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("Unused")
 package me.kgustave.kson
 
 import java.io.IOException
@@ -27,7 +28,7 @@ import kotlin.reflect.KClass
 /**
  * @author Kaidan Gustave
  */
-@Suppress("MemberVisibilityCanPrivate", "Unused")
+@Suppress("MemberVisibilityCanPrivate")
 class KSONArray(private val list: MutableList<Any?> = ArrayList()): Collection<Any?> by list
 {
     @Throws(KSONException::class)
@@ -68,6 +69,8 @@ class KSONArray(private val list: MutableList<Any?> = ArrayList()): Collection<A
     constructor(array: Array<*>): this() {
         array.mapTo(list) { KSONObject.wrap(it) }
     }
+
+    constructor(initialSize: Int, init: (Int) -> Any?): this(Array(initialSize, init))
 
     // Requires kotlin.reflect
     constructor(eClass: KClass<Enum<*>>): this() {
@@ -172,7 +175,7 @@ class KSONArray(private val list: MutableList<Any?> = ArrayList()): Collection<A
                     1.0 is T           -> value.toDouble() as T
                     1.0.toFloat() is T -> value.toFloat() as T
                     1.toByte() is T    -> value.toByte() as T
-                    ' ' is T           -> value.toChar() as T
+
                     else -> null
                 }
             } else {
@@ -243,5 +246,3 @@ class KSONArray(private val list: MutableList<Any?> = ArrayList()): Collection<A
         }
     }
 }
-
-private fun List<Any?>.nullified() = map { if(it == KSONObject.NULL) null else it }

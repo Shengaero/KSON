@@ -17,7 +17,6 @@
 package me.kgustave.kson
 
 import me.kgustave.kson.annotation.KSON
-import me.kgustave.kson.annotation.KSONConstructor
 import me.kgustave.kson.annotation.KSONValue
 import org.intellij.lang.annotations.Language
 import java.io.IOException
@@ -26,16 +25,58 @@ import java.io.Writer
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.collections.HashMap
-import kotlin.reflect.KClass
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 
 /**
- * Java Script Object Notation based
+ * **KSONObject**
+ *
+ * A JSON Object, commonly expressed and used in JavaScript.
+ *
+ * The basic structure of a KSONObject is a [MutableMap] that
+ * pairs generic objects with [Strings][String].
+ *
+ * **Syntax Operators**
+ *
+ * KSONObjects make use of **many** of the Kotlin standard
+ * operator functions to provide very neat, readable, and
+ * formatted style.
+ *
+ * ```kotlin
+ * fun syntax(kson: KSONObject) {
+ *     kson["foo"] = "bar"                 // Sets a key "foo" to a value "bar"
+ *
+ *     val baz = kson["baz"] as Int        // You can do this
+ *                                         // or
+ *     val bazAgain = kson.get<Int>("baz") // you can do this
+ *
+ *     kson += "bal" to "fal"              // Pairs can be plusAssigned to a KSONObject
+ * }
+ * ```
+ *
+ * **Nullability**
+ *
+ * While certainly exposing values as nullable in some areas,
+ * internally all values are treated as non-nullable.
+ *
+ * Developers are provided with `null` in cases where the return
+ * value might not exist, or might require provision via request
+ * of the developer but not be guaranteed.
+ *
+ * The issue with trying to manage the duality of knowing internally
+ * nothing is ever `null` while still providing Kotlin standard
+ * null-safety is conquered here by pseudo-implementation of MutableMap,
+ * and usage of a faux-null object that is treated as `null` internally,
+ * but not ever provided as a result of a function.
+ *
+ * Hence, in areas where data might not contain [KSONObject.NULL], the
+ * actual `null` value is provided instead.
+ *
  * @author Kaidan Gustave
  */
+@SinceKotlin("1.1")
 class KSONObject @Throws(KSONException::class)
 constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
     companion object {
@@ -43,19 +84,27 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
          * Represents a `null` value in either a [KSONObject] or [KSONArray].
          *
          * These are handled internally to avoid using roundabout and elaborate
-         * processes to deal with null, safety, as well as to mimic more closely
+         * processes to deal with null-safety, as well as to mimic more closely
          * org.json, which this library descends from.
          *
          * On user and developer end, this is not exposed or provided when getting
          * values from this API, and simply a `null` value will be provided if at
          * a location in a KSONObject or KSONArray an instance of this is located.
          */
-        class Null internal constructor() {
+        class Null @PublishedApi internal constructor() {
             override fun toString() = "null"
             override fun equals(other: Any?): Boolean = other == null || other is Null
             override fun hashCode() = javaClass.hashCode()
         }
 
+        /**
+         * The instance declaration of [Null].
+         *
+         * While exposed externally, and available for usage outside of the library,
+         * such behavior is discouraged due to the actual usage of this instance
+         *
+         * @see   KSONObject.Null
+         */
         @JvmField val NULL = Null()
 
         @[JvmStatic Throws(IOException::class)]
@@ -220,6 +269,38 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
             return string
         }
 
+        @Throws(KSONException::class)
+        fun valueToString(value: Any?): String {
+            return when(value) {
+                NULL -> "null"
+
+                is KSONString -> try {
+                    value.toKSONString()
+                } catch (e: Exception) {
+                    throw KSONException(e)
+                }
+
+                is Number -> {
+                    val numberAsString = numberToString(value as Number?)
+                    return try {
+                        BigDecimal(numberAsString)
+                        numberAsString
+                    } catch (ex: NumberFormatException) {
+                        quote(numberAsString)
+                    }
+                }
+
+                is Boolean, is KSONObject, is KSONArray -> value.toString()
+
+                is Map<*,*> -> KSONObject(value).toString()
+                is Collection<*> -> KSONArray(value).toString()
+                is Array<*> -> KSONArray(value).toString()
+                is Enum<*> -> quote(value.name)
+
+                else -> quote(value.toString())
+            }
+        }
+
         @JvmStatic
         fun wrap(obj: Any?): Any {
             try {
@@ -236,7 +317,7 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
 
                     else -> {
                         return if(obj::class.findAnnotation<KSON>() != null) {
-                            KSONObject(obj, metaWrap = true)
+                            KSONObject(obj)
                         } else {
                             val pack = obj.javaClass.`package`
                             val packName = if(pack != null) pack.name else ""
@@ -246,7 +327,7 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
                                packName.startsWith("kotlin.") ||
                                obj.javaClass.classLoader == null) {
                                 obj.toString()
-                            } else KSONObject(obj, metaWrap = false)
+                            } else KSONObject(obj)
                         }
                     }
                 }
@@ -258,8 +339,8 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
 
     // We copy the baseMap so that end developers don't
     // either on accident or on purpose modify it without permission.
-    private val map: MutableMap<String, Any?> = map.run baseMap@ {
-        val copyMap = HashMap<String, Any?>()
+    private val map: MutableMap<String, Any> = map.run baseMap@ {
+        val copyMap = HashMap<String, Any>()
 
         if(this@baseMap.isEmpty())
             return@baseMap copyMap
@@ -273,10 +354,14 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
         return@baseMap copyMap
     }
 
-    override val size: Int by this.map
-    override val entries: MutableSet<MutableMap.MutableEntry<String, Any?>> by this.map
-    override val keys: MutableSet<String> by this.map
-    override val values: MutableCollection<Any?> by this.map
+    override val size: Int
+        get() = map.size
+    override val entries: MutableSet<MutableMap.MutableEntry<String, Any?>>
+        get() = map.entries.mutableMapTo(HashSet()) { Entry(this, it.key, it.value) }
+    override val keys: MutableSet<String>
+        get() = map.keys
+    override val values: MutableCollection<Any?>
+        get() = map.values.mapMutable { it }
 
     @Throws(KSONException::class)
     constructor(x: KSONTokener): this() {
@@ -327,30 +412,26 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
      * This constructor will take a different approach to wrapping
      * the the object depending on the value of [metaWrap].
      *
-     * 1) If [metaWrap] is `true`, the constructor will use annotations
-     *    provided in the [annotations][me.kgustave.kson.annotation]
+     * 1) If the class is annotated with @[KSON], the constructor will use
+     *    annotations provided in the [annotations][me.kgustave.kson.annotation]
      *    package to [metaWrap][KSONObject.metaWrap] the object.
      *
-     * 2) If [metaWrap] is `false`, the constructor will populate
-     *    the internal map for this KSONObject using [populateMap].
-     *
-     * Default [metaWrap] is `false`.
+     * 2) If the class is **not** annotated with @[KSON], the constructor
+     *    will populate the internal map for this KSONObject using
+     *    [populateMap].
      *
      * @param  any
      *         The [Any] to use.
-     * @param  metaWrap
-     *         Whether or not this will use meta-annotations on the
-     *         provided [any] to create the KSONObject.
      *
      * @throws KSONException
      *         If:
-     *         1) A member property annotated with @[KSONValue]
-     *            is not `public` *and* [metaWrap] is `true`.
+     *         1) A member property annotated with @[KSONValue] is not
+     *            `public` and the class is annotated with @[KSON].
      *         2) An error is thrown while [wrapping][wrap] this.
      */
-    @[JvmOverloads Throws(KSONException::class)]
-    constructor(any: Any, metaWrap: Boolean = false): this() {
-        if(metaWrap) {
+    @[Throws(KSONException::class)]
+    constructor(any: Any): this() {
+        if(any::class.findAnnotation<KSON>() != null) {
             metaWrap(any)
         } else {
             populateMap(any)
@@ -422,21 +503,52 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
 
     override fun toString() = toString(0)
 
-    inline fun <reified T> opt(key: String, defaultValue: T): T {
-        return when(defaultValue) {
-            is String -> this[key]
-            is KSONObject -> this[key]
-            is KSONArray -> this[key]
-            is Int -> this[key]
-            is Long -> this[key]
-            is Short -> this[key]
-            is Char -> this[key]
-            is Byte -> this[key]
-            is Float -> this[key]
-            is Double -> this[key]
+    inline fun <reified T: Any> opt(key: String): T? {
+        try {
+            val value = this[key]
+            return when(value) {
+                is Number -> when {
+                    1 is T             -> value.toInt() as T
+                    1L is T            -> value.toLong() as T
+                    1.toShort() is T   -> value.toShort() as T
+                    1.0 is T           -> value.toDouble() as T
+                    1.0.toFloat() is T -> value.toFloat() as T
+                    1.toByte() is T    -> value.toByte() as T
+                    else               -> null
+                }
+                else -> value as? T
+            }
+        } catch(e: KSONException) {
+            return null
+        }
+    }
 
-            else -> throw KSONException("${T::class} is not an opt-able type!")
-        } as? T ?: defaultValue
+    inline fun <reified T> opt(key: String, defaultValue: T): T {
+        return try {
+            when(defaultValue) {
+                is String -> this[key].toString()
+                is Char -> this[key]
+                is KSONObject -> this[key]
+                is KSONArray -> this[key]
+                is Number -> {
+                    val value = this[key] as Number
+                    when {
+                        1 is T             -> value.toInt() as T
+                        1L is T            -> value.toLong() as T
+                        1.toShort() is T   -> value.toShort() as T
+                        1.0 is T           -> value.toDouble() as T
+                        1.0.toFloat() is T -> value.toFloat() as T
+                        1.toByte() is T    -> value.toByte() as T
+
+                        else               -> null
+                    }
+                }
+
+                else -> throw KSONException("${T::class} is not an opt-able type!")
+            } as? T ?: defaultValue
+        } catch(e: KSONException) {
+            return defaultValue
+        }
     }
 
     inline fun <reified T> only() = filter {
@@ -444,6 +556,52 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
     }.map {
         Entry(this, it.key, it.value ?: NULL)
     }.iterator()
+
+    infix fun query(pointer: String): Any? = query(KSONPointer(pointer))
+
+    infix fun query(pointer: KSONPointer): Any? = pointer.queryFrom(this)
+
+    /**
+     * Meta-constructs a new instance of [T] using annotations
+     * in the [kson annotations][me.kgustave.kson.annotation]
+     * package.
+     *
+     * @param  T
+     *         The type of object to construct using this KSONObject.
+     *         Should be annotated with @[KSONConstructor].
+     *
+     * @throws KSONException
+     *         If an exception is thrown while calling the constructor.
+     * @throws NoSuchElementException
+     *         If no constructor is annotated with @[KSONConstructor].
+     *
+     * @see    KSONSerializer
+     *
+     * @return A new, never-null instance of T using the calling KSONObject
+     */
+    @Throws(KSONException::class, NoSuchElementException::class)
+    inline fun <reified T: Any> construct() = KSONSerializer.construct(T::class, this)
+
+    /**
+     * An overload for integration with native and other jvm languages
+     * where [construct] cannot be called.
+     *
+     * @param  cla
+     *         The [KClass] of object to construct using this
+     *         KSONObject. Should be annotated with [@KSON][KSON].
+     *
+     * @throws KSONException
+     *         If an exception is thrown while calling the constructor.
+     * @throws NoSuchElementException
+     *         If no constructor is annotated with @[KSONConstructor].
+     *
+     * @see    KSONSerializer
+     *
+     * @return A new, never-null instance of [cla] using the calling
+     *         KSONObject.
+     */
+    @Throws(KSONException::class, NoSuchElementException::class)
+    fun <T: Any> KSONObject.construct(cla: Class<T>): T = KSONSerializer.construct(cla, this)
 
     @Throws(KSONException::class)
     private fun populateMap(bean: Any) {
@@ -565,109 +723,6 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
     }
 
     /**
-     * Meta-constructs a new instance of [T] using annotations
-     * in the [kson annotations][me.kgustave.kson.annotation]
-     * package.
-     *
-     * The specified type must have at least one constructor
-     * annotated with @[KSONConstructor], the arguments of which
-     * should correspond to the parameters of the constructor
-     * in the order they are provided in the constructor.
-     *
-     * Example:
-     * ```kotlin
-     * fun main(args: Array<String>) {
-     *     val kson = KSONObject()
-     *     kson["name"] = "Shengaero"
-     *     kson["age"] = 17
-     *
-     *     println(kson.construct<Person>().introduction())
-     * }
-     *
-     * data class Person @KSONConstructor("name", "age")
-     * constructor(val name: String, val age: Int) {
-     *     fun introduction(): String = "Hello, my name is $name, I am $age years old."
-     * }
-     *
-     * // Hello, my name is Shengaero, I am 17 years old.
-     * ```
-     *
-     * @param  T
-     *         The type of object to construct using this KSONObject.
-     *         Should be annotated with @[KSONConstructor].
-     *
-     * @throws KSONException
-     *         If an exception is thrown while calling the constructor.
-     * @throws NoSuchElementException
-     *         If no constructor is annotated with @[KSONConstructor].
-     *
-     * @return A new, never-null instance of T using the calling KSONObject
-     */
-    @Throws(KSONException::class, NoSuchElementException::class)
-    inline fun <reified T: Any> construct() = construct(T::class)
-
-    /**
-     * An overload for integration with native and other jvm languages
-     * where [construct] cannot be called.
-     *
-     * @param  cla
-     *         The [KClass] of object to construct using this
-     *         KSONObject. Should be annotated with [@KSON][KSON].
-     *
-     * @throws KSONException
-     *         If an exception is thrown while calling the constructor.
-     * @throws NoSuchElementException
-     *         If no constructor is annotated with @[KSONConstructor].
-     *
-     * @see    construct
-     *
-     * @return A new, never-null instance of [cla] using the calling
-     *         KSONObject.
-     */
-    @Throws(KSONException::class, NoSuchElementException::class)
-    fun <T: Any> construct(cla: Class<T>) = construct(cla.kotlin)
-
-    /**
-     * Constructs an instance of [cla] using this KSONObject.
-     *
-     * @param  cla
-     *         The [KClass] of object to construct using this
-     *         KSONObject. Should be annotated with [@KSON][KSON].
-     *
-     * @throws KSONException
-     *         If an exception is thrown while calling the constructor.
-     * @throws NoSuchElementException
-     *         If no constructor is annotated with @[KSONConstructor].
-     *
-     * @return A new, never-null instance of [cla] using the calling
-     *         KSONObject.
-     */
-    @Throws(KSONException::class, NoSuchElementException::class)
-    fun <T: Any> construct(cla: KClass<T>): T {
-        return cla.constructors.filter {
-            // Constructor not annotated
-            val conAnn = it.findAnnotation<KSONConstructor>() ?: return@filter false
-
-            if(it.visibility != KVisibility.PUBLIC)
-                throw KSONException("Constructor annotated with @KSONConstructor is not public")
-
-            val keyParams = conAnn.value
-
-            if(keyParams.isEmpty() || it.parameters.size != keyParams.size) return@filter false
-
-            return@filter keyParams.all { containsKey(it) }
-        }.first().run {
-            val conAnn = findAnnotation<KSONConstructor>()!!
-
-            try {
-                call(*conAnn.value.map { get(it) }.toTypedArray())
-            } catch(e: Exception) {
-                throw KSONException("Failed to instantiate $cla.",e)
-            }
-        }
-    }
-
-    /**
      * Simplified implementation of [MutableMap.MutableEntry] for handling
      * key-value entries a [KSONObject].
      *
@@ -679,27 +734,15 @@ constructor(map: Map<String?, Any?> = HashMap()): MutableMap<String, Any?> {
         override val key: String,
         value: Any
     ) : MutableMap.MutableEntry<String, Any?> {
-        override var value: Any = value
-            private set
+        override var value: Any? = value
+            private set(value) { field = value ?: NULL }
+            get() = if(NULL == field) null else field
 
         override fun setValue(newValue: Any?): Any? {
             val old = value.takeIf { it != NULL }
             value = newValue ?: NULL
-            kson.put(key, value)
+            kson.put(key, newValue)
             return old
         }
     }
 }
-
-inline val <reified T: Map<String?, *>> T.toKSON: KSONObject
-    /**
-     * Creates a new KSONObject using the receiving [Map].
-     * This is a shortcut for [KSONObject()][KSONObject].
-     *
-     * @throws KSONException
-     *         If one is thrown while creating the KSONObject.
-     *
-     * @return A new KSONObject from the Map.
-     */
-    @Throws(KSONException::class)
-    inline get() = KSONObject(this)

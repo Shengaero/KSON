@@ -227,7 +227,7 @@ class KSONTokener(reader: Reader) : AutoCloseable by reader {
 
             '[' -> {
                 back()
-                return KSONObject(this)
+                return KSONArray(this)
             }
         }
 
@@ -278,6 +278,3 @@ class KSONTokener(reader: Reader) : AutoCloseable by reader {
 
     override fun toString() = " at " + this.index + " [character " + this.character + " line " + this.line + "]"
 }
-
-internal fun KSONTokener.syntaxError(message: String) = KSONException(message + toString())
-internal fun KSONTokener.syntaxError(message: String, cause: Throwable) = KSONException(message + toString(), cause)

@@ -16,11 +16,20 @@
 @file:Suppress("unused")
 package me.kgustave.kson.json
 
+import me.kgustave.kson.KSONException
 import me.kgustave.kson.KSONObject
+import me.kgustave.kson.KSONSerializer
 import org.json.JSONObject
+import kotlin.reflect.KClass
 
 inline val <reified T: JSONObject> T.kson: KSONObject
     inline get() = KSONObject(toMap())
 
 inline val KSONObject.json: JSONObject
     inline get() = JSONObject(toString())
+
+@Throws(KSONException::class, NoSuchElementException::class)
+inline fun <reified T: Any> JSONObject.construct(cla: KClass<T> = T::class) = KSONSerializer.construct(cla, this.kson)
+
+@Throws(KSONException::class, NoSuchElementException::class)
+inline fun <reified T: Any> JSONObject.construct(cla: Class<T> = T::class.java) = KSONSerializer.construct(cla, this.kson)
