@@ -1,0 +1,31 @@
+apply plugin: 'kotlin-platform-common'
+
+group 'me.kgustave'
+version '0.1'
+
+archivesBaseName = moduleID as String
+
+dokkaJavadoc {
+    moduleName = moduleID as String
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test-common:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-annotations-common:$kotlin_version"
+}
+
+build {
+    dependsOn clean
+    dependsOn jar
+    dependsOn classes
+
+    classes.mustRunAfter clean
+    jar.mustRunAfter classes
+}

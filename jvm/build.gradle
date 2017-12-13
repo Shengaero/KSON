@@ -18,9 +18,8 @@ apply plugin: 'com.github.johnrengelman.shadow'
 group 'me.kgustave'
 version '0.1'
 
-def jarBaseName = "KSON-jvm"
-
 sourceCompatibility = 1.8
+archivesBaseName = moduleID as String
 
 repositories {
     jcenter()
@@ -28,13 +27,14 @@ repositories {
 }
 
 dependencies {
-    expectedBy rootProject
+    expectedBy project(":core")
 
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compileOnly 'org.json:json:20170516'
 
     testCompile 'junit:junit:4.12'
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
 }
@@ -43,36 +43,20 @@ sourceSets {
     main.kotlin.srcDirs += 'src/main/kotlin'
     test.kotlin.srcDirs += 'src/test/kotlin'
 
-    test {
-        compileClasspath += main.compileClasspath
-        runtimeClasspath += main.runtimeClasspath
-    }
+    test.compileClasspath += main.compileClasspath
+    test.runtimeClasspath += main.runtimeClasspath
 }
 
 jar {
-    baseName = jarBaseName
     classifier = ""
     manifest {
         attributes 'Implementation-Version': "$version"
     }
 }
 
-task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    logging.level = LogLevel.QUIET
-    outputFormat = 'javadoc'
-    outputDirectory = "$buildDir/dokkaJavadoc"
-}
-
 task sourcesJar(type: Jar, dependsOn: classes) {
-    baseName = jarBaseName
     classifier = 'sources'
     from "$buildDir/sources"
-}
-
-task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
-    baseName = jarBaseName
-    classifier = 'javadoc'
-    from dokkaJavadoc.outputDirectory
 }
 
 task sources(type: Copy) {
@@ -88,8 +72,11 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
+dokkaJavadoc {
+    moduleName = moduleID as String
+}
+
 shadowJar {
-    baseName = jarBaseName
     classifier = "withDependencies"
 }
 

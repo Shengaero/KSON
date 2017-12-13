@@ -27,34 +27,31 @@ buildscript {
     }
 }
 
-apply plugin: 'kotlin-platform-common'
-apply plugin: 'maven-publish'
-
-group 'me.kgustave'
-version '0.1'
-archivesBaseName = "${group}.kson"
-
-repositories {
-    jcenter()
-    mavenCentral()
-}
-
-dependencies {
-    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
-
-    testCompile "org.jetbrains.kotlin:kotlin-test-common:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test-annotations-common:$kotlin_version"
-}
-
 wrapper {
     gradleVersion '4.0'
 }
 
 allprojects {
     apply plugin: 'idea'
-    apply plugin: 'org.jetbrains.dokka'
 
     group 'me.kgustave'
     version '0.1'
-    archivesBaseName = "${group}.kson"
+}
+
+subprojects {
+    apply plugin: 'org.jetbrains.dokka'
+
+    ext.moduleID = "$rootProject.name-$project.name"
+
+    task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+        logging.level = LogLevel.QUIET
+        outputFormat = 'javadoc'
+        outputDirectory = "$buildDir/dokkaJavadoc"
+    }
+
+    task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
+        baseName = moduleID as String
+        classifier = 'javadoc'
+        from dokkaJavadoc.outputDirectory
+    }
 }
