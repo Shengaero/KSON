@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("unused")
 package me.kgustave.kson
 
 /**
@@ -30,9 +29,7 @@ package me.kgustave.kson
  *
  * @author Kaidan Gustave
  */
-class KSONException(override val message: String?, override val cause: Throwable?): RuntimeException(message, cause)
-{
-    constructor() : this(null, null)
-    constructor(message: String?) : this(message, null)
-    constructor(cause: Throwable?) : this(null, cause)
+class KSONException
+constructor(override val message: String? = null, override val cause: Throwable? = null): RuntimeException() {
+    constructor(cause: Throwable?): this(message = null, cause = cause)
 }

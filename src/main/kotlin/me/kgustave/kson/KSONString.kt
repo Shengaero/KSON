@@ -18,7 +18,6 @@ package me.kgustave.kson
 /**
  * @author Kaidan Gustave
  */
-interface KSONString
-{
+interface KSONString {
     fun toKSONString(): String
 }

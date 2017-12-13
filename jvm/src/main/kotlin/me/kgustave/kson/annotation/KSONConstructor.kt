@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package me.kgustave.kson
+package me.kgustave.kson.annotation
 
-expect internal fun List<Any?>.nullified(): List<Any?>
-
-expect internal inline fun <reified T, reified R>
-    MutableCollection<T>.mapMutable(transform: (T) -> R): MutableCollection<R>
-
-expect internal inline fun <reified T, reified R, reified C: MutableCollection<R>>
-    MutableCollection<T>.mutableMapTo(other: C, transform: (T) -> R): C
-
-// Exception tools
-expect internal inline fun require(condition: Boolean, lazy: () -> String)
-expect internal inline fun denyIf(condition: Boolean, lazy: () -> String)
+/**
+ * @author Kaidan Gustave
+ */
+@Target(AnnotationTarget.CONSTRUCTOR, AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class KSONConstructor(vararg val value: String)

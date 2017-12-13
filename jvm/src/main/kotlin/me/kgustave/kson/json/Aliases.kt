@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package me.kgustave.kson.annotation
+@file:[JvmName("aliases_jvmKt") Suppress("Unused")]
+package me.kgustave.kson.json
 
-/**
- * @author Kaidan Gustave
- */
-@Target(AnnotationTarget.CONSTRUCTOR)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class KSONConstructor(vararg val value: String)
+// Standard package
+typealias JSONTokener = me.kgustave.kson.KSONTokener
+typealias JSONSerializer = me.kgustave.kson.KSONSerializer
+
+// Annotations package
+typealias JSON = me.kgustave.kson.annotation.KSON
+typealias JSONConstructor = me.kgustave.kson.annotation.KSONConstructor
+typealias JSONValue = me.kgustave.kson.annotation.KSONValue

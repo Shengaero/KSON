@@ -1,10 +1,16 @@
 # Project Directories
 /.gradle/
 /.idea/
-/build/
-/out/
-/src/test/
+/**/build/
+/**/out/
+/**/src/test/
+
+# Intellij Files
+*.iml
 
 # Data Files
 *.json
 *.kson
+
+# Unreleased Features
+/js/

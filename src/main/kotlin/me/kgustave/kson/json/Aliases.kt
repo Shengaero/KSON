@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:[JvmName("aliases_commonKt") Suppress("Unused")]
 package me.kgustave.kson.json
 
-// Standard package
-typealias JSONObject = me.kgustave.kson.KSONObject
-typealias JSONArray = me.kgustave.kson.KSONArray
-typealias JSONTokener = me.kgustave.kson.KSONTokener
-typealias JSONSerializer = me.kgustave.kson.KSONSerializer
-typealias JSONPointer = me.kgustave.kson.KSONPointer
-typealias JSONString = me.kgustave.kson.KSONString
-typealias JSONException = me.kgustave.kson.KSONException
+import kotlin.jvm.JvmName
 
-// Annotations package
-typealias JSON = me.kgustave.kson.annotation.KSON
-typealias JSONConstructor = me.kgustave.kson.annotation.KSONConstructor
-typealias JSONValue = me.kgustave.kson.annotation.KSONValue
+// Standard package
+typealias JSONObject    = me.kgustave.kson.KSONObject
+typealias JSONArray     = me.kgustave.kson.KSONArray
+typealias JSONException = me.kgustave.kson.KSONException
+typealias JSONPointer   = me.kgustave.kson.KSONPointer
+typealias JSONString    = me.kgustave.kson.KSONString

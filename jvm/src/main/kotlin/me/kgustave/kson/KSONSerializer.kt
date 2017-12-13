@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("MemberVisibilityCanPrivate")
 package me.kgustave.kson
 
 import me.kgustave.kson.annotation.KSONConstructor
@@ -59,7 +60,7 @@ import kotlin.reflect.full.primaryConstructor
  *
  * @author Kaidan Gustave
  */
-@[SinceKotlin("1.1") Suppress("MemberVisibilityCanPrivate")]
+@SinceKotlin("1.1")
 object KSONSerializer {
     /**
      * Meta-constructs a new instance of [T] using annotations
@@ -167,7 +168,7 @@ object KSONSerializer {
                 throw KSONException("Primary constructor of $cla is not public")
 
             return constructor.run {
-                val conAnn = findAnnotation<KSONConstructor>()!!
+                val conAnn = cla.findAnnotation<KSONConstructor>()!!
 
                 try {
                     call(*conAnn.value.map { kson[it] }.toTypedArray())

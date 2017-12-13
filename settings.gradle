@@ -14,4 +14,6 @@
  * limitations under the License.
  */
 rootProject.name = 'KSON'
+include 'jvm'
+//include 'js'
 
