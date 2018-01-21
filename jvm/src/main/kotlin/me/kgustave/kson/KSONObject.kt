@@ -19,6 +19,9 @@ package me.kgustave.kson
 import me.kgustave.kson.annotation.KSON
 import me.kgustave.kson.annotation.KSONValue
 import org.intellij.lang.annotations.Language
+import java.io.IOException
+import java.io.StringWriter
+import java.io.Writer
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.collections.HashMap
@@ -79,70 +82,69 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
     actual companion object {
         @JvmField actual val NULL = Null()
 
-        internal fun indent(writer: StringBuilder, indent: Int) {
-            var i = 0
-            while(i < indent) {
-                writer.append(" ")
-                i += 1
+        @Throws(IOException::class)
+        internal fun indent(writer: Writer, indent: Int) {
+            for(i in 0 until indent) {
+                writer.write(" ")
             }
         }
 
+        @Throws(IOException::class)
         internal fun quote(string: String): String {
-            return buildString {
-                quote(string, this)
-            }
+            return StringWriter().use { sw -> synchronized(sw.buffer) { quote(string, sw).toString() } }
         }
 
-        internal fun quote(string: String?, builder: StringBuilder): StringBuilder {
+        @Throws(IOException::class)
+        internal fun quote(string: String?, writer: Writer): Writer {
             if(string == null || string.isEmpty()) {
-                builder.append("\"\"")
-                return builder
+                writer.write("\"\"")
+                return writer
             }
 
             var b: Char
             var c: Char = 0.toChar()
 
-            builder.append("\"")
+            writer.write("\"")
             for(i in 0 until string.length) {
                 b = c
                 c = string[i]
 
                 when(c) {
                     '\\', '"' -> {
-                        builder.append("\\")
-                        builder.append(c.toInt())
+                        writer.write("\\")
+                        writer.write(c.toInt())
                     }
 
                     '/' -> {
                         if(b == '<')
-                            builder.append("\\")
-                        builder.append(c.toInt())
+                            writer.write("\\")
+                        writer.write(c.toInt())
                     }
 
-                    '\b' -> builder.append("\\b")
-                    '\t' -> builder.append("\\t")
-                    '\n' -> builder.append("\\n")
-                    '\u000C' -> builder.append("\\f") // Apparent kotlin doesn't have \f
-                    '\r' -> builder.append("\\r")
+                    '\b' -> writer.write("\\b")
+                    '\t' -> writer.write("\\t")
+                    '\n' -> writer.write("\\n")
+                    '\u000C' -> writer.write("\\f") // Apparent kotlin doesn't have \f
+                    '\r' -> writer.write("\\r")
                     else -> if(c < ' ' || c in '\u0080'..'\u00a0' || c in '\u2000'..'\u2100') {
-                        builder.append("\\u")
+                        writer.write("\\u")
                         val hhhh = Integer.toHexString(c.toInt())
-                        builder.append("0000", 0, 4 - hhhh.length)
-                        builder.append(hhhh)
+                        writer.write("0000", 0, 4 - hhhh.length)
+                        writer.write(hhhh)
                     } else {
-                        builder.append(c.toInt())
+                        writer.write(c.toInt())
                     }
                 }
             }
-            builder.append("\"")
-            return builder
+            writer.write("\"")
+            return writer
         }
 
         @Suppress("UNCHECKED_CAST")
-        @Throws(KSONException::class)
-        internal fun appendValue(builder: StringBuilder, value: Any?, indentFactor: Int, indent: Int): StringBuilder {
+        @Throws(KSONException::class, IOException::class)
+        internal fun writeValue(writer: Writer, value: Any?, indentFactor: Int, indent: Int): Writer {
             when(value) {
-                null -> builder.append("null")
+                null -> writer.write("null")
                 is KSONString -> {
                     val o: Any? = try {
                         value.toKSONString()
@@ -150,29 +152,29 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
                         throw KSONException(e)
                     }
 
-                    builder.append(o?.toString() ?: quote(value.toString()))
+                    writer.write(o?.toString() ?: quote(value.toString()))
                 }
 
                 is Number -> {
                     val numberAsString = numberToString(value as Number?)
                     try {
                         BigDecimal(numberAsString) // This tests if the number is correct
-                        builder.append(numberAsString)
+                        writer.write(numberAsString)
                     } catch (ex: NumberFormatException) {
-                        quote(numberAsString, builder)
+                        quote(numberAsString, writer)
                     }
                 }
 
-                is Boolean -> builder.append(value.toString())
-                is Enum<*> -> builder.append(quote(value.name))
-                is KSONObject -> value.append(builder, indentFactor, indent)
-                is KSONArray -> value.append(builder, indentFactor, indent)
-                is Map<*, *> -> KSONObject(value as Map<String, Any?>).append(builder, indentFactor, indent)
-                is Collection<*> -> KSONArray(value).append(builder, indentFactor, indent)
-                is Array<*> ->  KSONArray(value).append(builder, indentFactor, indent)
-                else -> quote(value.toString(), builder)
+                is Boolean -> writer.write(value.toString())
+                is Enum<*> -> writer.write(quote(value.name))
+                is KSONObject -> value.write(writer, indentFactor, indent)
+                is KSONArray -> value.write(writer, indentFactor, indent)
+                is Map<*, *> -> KSONObject(value as Map<String, Any?>).write(writer, indentFactor, indent)
+                is Collection<*> -> KSONArray(value).write(writer, indentFactor, indent)
+                is Array<*> ->  KSONArray(value).write(writer, indentFactor, indent)
+                else -> quote(value.toString(), writer)
             }
-            return builder
+            return writer
         }
 
         @Throws(KSONException::class)
@@ -186,6 +188,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
             if(string.indexOf('.') > 0 && string.indexOf('e') < 0 && string.indexOf('E') < 0) {
                 while(string.endsWith("0"))
                     string = string.substring(0, string.length - 1)
+
                 if(string.endsWith("."))
                     string = string.substring(0, string.length - 1)
             }
@@ -216,15 +219,18 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
             val initial = string[0]
             if(initial in '0'..'9' || initial == '-') {
                 try {
-                    if(string.indexOf('.') > -1 || string.indexOf('e') > -1 ||
-                       string.indexOf('E') > -1 || "-0" == string) {
+                    if(string.indexOf('.') > -1 ||
+                       string.indexOf('e') > -1 ||
+                       string.indexOf('E') > -1 ||
+                       string == "-0") {
                         val d = string.toDouble()
                         if(!d.isInfinite() && !d.isNaN())
                             return d
                     } else {
-                        val myLong = string.toLong()
-                        if(string == myLong.toString())
-                            return if(myLong == myLong.toInt().toLong()) myLong.toInt() else myLong
+                        val long = string.toLong()
+
+                        if(string == long.toString())
+                            return if(long == long.toInt().toLong()) long.toInt() else long
                     }
                 } catch (ignore: Exception) {}
             }
@@ -459,6 +465,8 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
     override fun containsKey(key: String): Boolean = map.contains(key)
     override fun containsValue(value: Any?): Boolean = map.containsValue(value)
 
+    actual fun isNull(key: String): Boolean = map[key]?.takeIf { NULL != it } === null
+
     @Throws(KSONException::class)
     actual override operator fun get(key: String): Any =
         map[key]?.takeIf { NULL != it } ?: throw KSONException("KSONObject[${quote(key)}] not found.")
@@ -469,7 +477,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
 
     actual override fun remove(key: String): KSONObject = put(key, null)
 
-    actual inline fun <reified T: Any> opt(key: String): T? = try { this[key] as? T } catch(e: KSONException) { null }
+    actual inline fun <reified T: Any> opt(key: String): T? = if(isNull(key)) null else this[key] as? T
 
     actual inline fun <reified T> opt(key: String, defaultValue: T): T {
         return try {
@@ -592,48 +600,48 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
      */
     @Throws(KSONException::class)
     actual fun toString(indentFactor: Int): String {
-        return buildString { append(this, indentFactor, 0) }
+        return StringWriter().use { sw -> synchronized(sw.buffer) { write(sw, indentFactor, 0).toString() } }
     }
 
     actual override fun toString() = toString(0)
 
     @Throws(KSONException::class)
-    fun append(builder: StringBuilder, indentFactor: Int, indent: Int): StringBuilder {
+    internal fun write(writer: Writer, indentFactor: Int, indent: Int): Writer {
         try {
             var commanate = false
             val length = size
-            builder.append("{")
+            writer.write("{")
 
             if(length == 1) {
                 val key = map.keys.elementAt(0)
-                builder.append(quote(key))
-                builder.append(":")
+                writer.write(quote(key))
+                writer.write(":")
                 if(indentFactor > 0)
-                    builder.append(" ")
-                appendValue(builder, map[key], indentFactor, indent)
+                    writer.write(" ")
+                writeValue(writer, map[key], indentFactor, indent)
             } else if(length != 0) {
                 val newIndent = indent + indentFactor
                 for(key in map.keys) {
                     if(commanate)
-                        builder.append(",")
+                        writer.write(",")
                     if(indentFactor > 0)
-                        builder.append("\n")
+                        writer.write("\n")
 
-                    indent(builder, newIndent)
-                    builder.append(quote(key))
-                    builder.append(":")
+                    indent(writer, newIndent)
+                    writer.write(quote(key))
+                    writer.write(":")
                     if(indentFactor > 0)
-                        builder.append(" ")
-                    appendValue(builder, map[key], indentFactor, newIndent)
+                        writer.write(" ")
+                    writeValue(writer, map[key], indentFactor, newIndent)
                     commanate = true
                 }
                 if(indentFactor > 0)
-                    builder.append("\n")
-                indent(builder, indent)
+                    writer.write("\n")
+                indent(writer, indent)
             }
-            builder.append("}")
-            return builder
-        } catch (e: Exception) {
+            writer.write("}")
+            return writer
+        } catch (e: IOException) {
             throw KSONException("An error occurred while writing KSONObject to string.",e)
         }
     }

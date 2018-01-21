@@ -19,7 +19,7 @@ package me.kgustave.kson
 /**
  * @author Kaidan Gustave
  */
-expect class KSONArray constructor(list: MutableList<Any?> = ArrayList()) : Collection<Any?> {
+expect class KSONArray constructor(list: MutableList<Any?> = ArrayList()): Collection<Any?> {
 
     constructor(source: String)
     constructor(collection: Collection<*>)

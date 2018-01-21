@@ -16,6 +16,9 @@
 @file:Suppress("Unused", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
+import java.io.IOException
+import java.io.StringWriter
+import java.io.Writer
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -27,8 +30,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("MemberVisibilityCanPrivate")
 actual class KSONArray
-actual constructor(private val list: MutableList<Any?> = ArrayList()): Collection<Any?> by list
-{
+actual constructor(private val list: MutableList<Any?> = ArrayList()): Collection<Any?> by list {
     @Throws(KSONException::class)
     constructor(x: KSONTokener): this() {
         if(x.nextClean() != '[')
@@ -158,42 +160,42 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
 
     @Throws(KSONException::class)
     actual fun toString(indentFactor: Int): String {
-        return buildString { append(this, indentFactor, 0) }
+        return StringWriter().use { sw -> synchronized(sw.buffer) { write(sw, indentFactor, 0).toString() } }
     }
 
     @Throws(KSONException::class)
-    fun append(builder: StringBuilder, indentFactor: Int, indent: Int): StringBuilder {
+    fun write(builder: Writer, indentFactor: Int, indent: Int): Writer {
         try {
             var commanate = false
             val length = size
-            builder.append("[")
+            builder.write("[")
 
             if (length == 1) {
-                KSONObject.appendValue(builder, list[0], indentFactor, indent)
+                KSONObject.writeValue(builder, list[0], indentFactor, indent)
             } else if (length != 0) {
                 val newindent = indent + indentFactor
                 var i = 0
                 while (i < length) {
                     if (commanate) {
-                        builder.append(",")
+                        builder.write(",")
                     }
                     if (indentFactor > 0) {
-                        builder.append("\n")
+                        builder.write("\n")
                     }
                     KSONObject.indent(builder, newindent)
-                    KSONObject.appendValue(builder, list[i], indentFactor, newindent)
+                    KSONObject.writeValue(builder, list[i], indentFactor, newindent)
                     commanate = true
                     i += 1
                 }
                 if (indentFactor > 0) {
-                    builder.append("\n")
+                    builder.write("\n")
                 }
 
                 KSONObject.indent(builder, indent)
             }
-            builder.append("]")
+            builder.write("]")
             return builder
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             throw KSONException(e)
         }
     }

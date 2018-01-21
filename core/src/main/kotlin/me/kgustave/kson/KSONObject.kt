@@ -48,12 +48,14 @@ constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?> {
     // returns with KSONObject#get
     override operator fun get(key: String): Any
 
+    fun isNull(key: String): Boolean
+
     inline fun <reified T: Any> opt(key: String): T?
     inline fun <reified T> opt(key: String, defaultValue: T): T
 
     infix fun query(pointer: String): Any?
     infix fun query(pointer: KSONPointer): Any?
-    infix inline fun query(pointer: KSONPointer.Builder.() -> Unit): Any?
+    inline infix fun query(pointer: KSONPointer.Builder.() -> Unit): Any?
 
     infix fun String.to(value: Any?): KSONObject
 
