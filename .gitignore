@@ -5,6 +5,9 @@
 /**/out/
 /**/src/test/
 
+# Keys
+gradle.properties
+
 # Intellij Files
 *.iml
 
