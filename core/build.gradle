@@ -1,8 +1,5 @@
 apply plugin: 'kotlin-platform-common'
 
-group 'me.kgustave'
-version '0.1'
-
 archivesBaseName = moduleID as String
 
 dokkaJavadoc {
