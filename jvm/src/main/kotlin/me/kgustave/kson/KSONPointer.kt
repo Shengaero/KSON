@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("Unused")
+@file:Suppress("Unused", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
 import java.io.UnsupportedEncodingException
@@ -26,7 +26,7 @@ import java.net.URLEncoder
 @Suppress("MemberVisibilityCanPrivate")
 actual class KSONPointer {
     companion object {
-        private val ENCODING = "UTF-8"
+        private const val ENCODING = "UTF-8"
         private val SEPARATOR_REGEX = Regex("/")
 
         private fun unescape(token: String) = token

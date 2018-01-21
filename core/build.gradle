@@ -14,6 +14,13 @@ repositories {
     mavenCentral()
 }
 
+task sourcesJar(type: Jar) {
+    from classes.outputs
+
+    baseName "$project.moduleID"
+    classifier 'sources'
+}
+
 dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
 

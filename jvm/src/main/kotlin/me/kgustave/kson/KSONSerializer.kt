@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("MemberVisibilityCanPrivate")
+@file:Suppress("MemberVisibilityCanPrivate", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
 import me.kgustave.kson.annotation.KSONConstructor

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 buildscript {
-    ext.kotlin_version = '1.2.0'
+    ext.kotlin_version = '1.2.20'
 
     repositories {
         jcenter()
@@ -24,6 +24,8 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'org.jetbrains.dokka:dokka-gradle-plugin:0.9.9'
+        classpath "com.github.ben-manes:gradle-versions-plugin:0.17.0"
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3"
     }
 }
 
@@ -39,7 +41,10 @@ allprojects {
 }
 
 subprojects {
+    apply plugin: 'maven-publish'
+    apply plugin: 'com.jfrog.bintray'
     apply plugin: 'org.jetbrains.dokka'
+    apply plugin: 'com.github.ben-manes.versions'
 
     ext.moduleID = "$rootProject.name-$project.name"
 
@@ -53,5 +58,68 @@ subprojects {
         baseName = moduleID as String
         classifier = 'javadoc'
         from dokkaJavadoc.outputDirectory
+    }
+
+    bintray {
+        user = bintrayUsername
+        key = bintrayApiKey
+
+        publications = ['BintrayRelease']
+        publish = true
+
+        pkg {
+            repo = 'maven'
+            name = 'KSON'
+            licenses = ['Apache-2.0']
+            vcsUrl = 'https://github.com/TheMonitorLizard/KSON/'
+            version {
+                name = project.version
+                released = new Date()
+            }
+        }
+    }
+
+    publishing {
+        publications {
+            BintrayRelease(MavenPublication) {
+                groupId = project.group
+                artifactId = project.moduleID
+                version = project.version
+
+                from project.components.java
+                artifact project.tasks.javadocJar
+                artifact project.tasks.sourcesJar
+
+                pom.withXml {
+                    def repositoriesNode = asNode().appendNode('repositories')
+                    def repositoryNode = repositoriesNode.appendNode('repository')
+
+                    repositoryNode.appendNode('name', 'bintray')
+                    repositoryNode.appendNode('id', 'bintray-kgustave-maven')
+                    repositoryNode.appendNode('url', 'https://dl.bintray.com/kgustave/maven')
+
+                    def dependenciesNode = asNode().appendNode('dependencies')
+
+                    if(project.name != 'core') {
+                        configurations.expectedBy.allDependencies.each {
+                            def dependencyNode = dependenciesNode.appendNode('dependency')
+                            dependencyNode.appendNode('groupId', it.group)
+                            dependencyNode.appendNode('artifactId', it.dependencyProject.moduleID)
+                            dependencyNode.appendNode('version', it.version)
+                            dependencyNode.appendNode('scope', 'compile')
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+task uploadAll {
+    group 'publishing'
+    description 'Publishes all modules.'
+
+    rootProject.childProjects.values().each {
+        dependsOn it.getTasksByName('bintrayUpload', true).first()
     }
 }

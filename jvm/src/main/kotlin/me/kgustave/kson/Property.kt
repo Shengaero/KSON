@@ -33,6 +33,6 @@ fun Properties.toKSONObject(): KSONObject {
 fun KSONObject.toProperties(): Properties {
     val props = Properties()
     for((key, value) in only<String>())
-        props.put(key, value)
+        props[key] = value
     return props
 }

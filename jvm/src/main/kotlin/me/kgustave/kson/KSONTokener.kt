@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("MemberVisibilityCanPrivate", "Unused")
+@file:Suppress("MemberVisibilityCanPrivate", "Unused", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
 import java.io.*
 
-class KSONTokener(reader: Reader) : AutoCloseable by reader {
+class KSONTokener(reader: Reader): AutoCloseable by reader {
 
-    constructor(inputStream: InputStream) : this(InputStreamReader(inputStream))
-    constructor(string: String) : this(StringReader(string))
+    constructor(inputStream: InputStream): this(InputStreamReader(inputStream))
+    constructor(string: String): this(StringReader(string))
 
     companion object {
         fun dehexchar(c: Char) = when (c) {
@@ -32,13 +32,13 @@ class KSONTokener(reader: Reader) : AutoCloseable by reader {
         }
     }
 
-    private val reader: Reader = if(reader.markSupported()) reader else BufferedReader(reader)
-    private var character: Long = 1
-    private var eof: Boolean = false
-    private var index: Long = 0
-    private var line: Long = 1
-    private var previous: Char = 0.toChar()
-    private var usePrevious: Boolean = false
+    private val reader = if(reader.markSupported()) reader else BufferedReader(reader)
+    private var character = 1L
+    private var eof = false
+    private var index = 0L
+    private var line = 1L
+    private var previous = 0.toChar()
+    private var usePrevious = false
 
     val isAtEnd: Boolean
         get() = this.eof && !this.usePrevious
