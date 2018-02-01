@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("MemberVisibilityCanPrivate", "Unused", "MemberVisibilityCanBePrivate")
+@file:Suppress("MemberVisibilityCanPrivate", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
 import me.kgustave.kson.annotation.KSON
@@ -144,7 +144,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
         @Throws(KSONException::class, IOException::class)
         internal fun writeValue(writer: Writer, value: Any?, indentFactor: Int, indent: Int): Writer {
             when(value) {
-                null -> writer.write("null")
+                null, NULL -> writer.write("null")
                 is KSONString -> {
                     val o: Any? = try {
                         value.toKSONString()

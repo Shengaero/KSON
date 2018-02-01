@@ -1,6 +1,4 @@
 buildscript {
-    ext.kotlin_version = '1.2.0'
-
     repositories {
         mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
@@ -26,7 +24,7 @@ repositories {
 dependencies {
     expectedBy project(":core")
 
-    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compileOnly 'org.json:json:20170516'
 
