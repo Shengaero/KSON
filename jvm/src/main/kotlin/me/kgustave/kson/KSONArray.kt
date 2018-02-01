@@ -16,6 +16,7 @@
 @file:Suppress("Unused", "MemberVisibilityCanBePrivate")
 package me.kgustave.kson
 
+import me.kgustave.kson.KSONObject.Companion.NULL
 import java.io.IOException
 import java.io.StringWriter
 import java.io.Writer
@@ -40,7 +41,7 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
             while(true) {
                 if(x.nextClean() == ',') {
                     x.back()
-                    list.add(KSONObject.NULL)
+                    list.add(NULL)
                 } else {
                     x.back()
                     list.add(x.nextValue() ?: throw KSONException("Tokener returned a null value!"))
@@ -90,7 +91,7 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
         val size = size
         if(index !in 0 until size)
             throw IndexOutOfBoundsException("Index specified not in bounds 0 - $size")
-        return list[index]?.takeIf { it != KSONObject.NULL } ?: throw KSONException("KSONArray[$index] is null.")
+        return list[index]?.takeIf { NULL != it } ?: throw KSONException("KSONArray[$index] is null.")
     }
 
     @Throws(KSONException::class)
@@ -101,7 +102,7 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
             list[index] = element
         } else {
             while(index != size) {
-                put(KSONObject.NULL)
+                put(NULL)
             }
             put(element)
         }
@@ -113,7 +114,7 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
         when(value) {
             null -> list.add(value)
 
-            KSONObject.NULL, is KSONObject, is KSONArray, is KSONString,
+            NULL, is KSONObject, is KSONArray, is KSONString,
             is Byte, is Char, is Short, is Int, is Long, is Boolean, is Float,
             is Double, is String, is BigInteger, is BigDecimal, is Enum<*> -> list.add(value)
 
@@ -139,7 +140,7 @@ actual constructor(private val list: MutableList<Any?> = ArrayList()): Collectio
     actual inline fun <reified T> opt(index: Int): T? = this[index] as? T
 
     @Throws(IndexOutOfBoundsException::class)
-    actual fun isNull(index: Int): Boolean = KSONObject.NULL == opt(index)
+    actual fun isNull(index: Int): Boolean = NULL == opt(index)
 
     actual fun toKSONObject(function: (Int, Any?) -> String): KSONObject {
         val kson = KSONObject()

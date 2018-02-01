@@ -275,7 +275,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
                 return when(obj) {
                     null -> NULL
 
-                    NULL == obj, is KSONObject, is KSONArray, is KSONString,
+                    NULL, is KSONObject, is KSONArray, is KSONString,
                     is Byte, is Char, is Short, is Int, is Long, is Boolean, is Float,
                     is Double, is String, is BigInteger, is BigDecimal, is Enum<*> -> obj
 
@@ -325,7 +325,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
     override val size: Int
         get() = map.size
     override val entries: MutableSet<MutableMap.MutableEntry<String, Any?>>
-        get() = map.entries.mutableMapTo(HashSet()) { Entry(this, it.key, it.value) }
+        get() = map.entries.mutableMapTo(HashSet()) { Entry(it.key, it.value) }
     override val keys: MutableSet<String>
         get() = map.keys
     override val values: MutableCollection<Any?>
@@ -443,10 +443,8 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
 
     @Throws(KSONException::class)
     actual override fun put(key: String, value: Any?): KSONObject {
-        if(value != null) {
-            testValidity(value)
-            map[key] = value
-        } else map.remove(key)
+        testValidity(value)
+        map[key] = value ?: KSONObject.NULL
         return this
     }
 
@@ -495,7 +493,7 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
         }
     }
 
-    inline fun <reified T> only() = filter { it.value is T }.map { Entry(this, it.key, it.value ?: NULL) }.iterator()
+    inline fun <reified T> only() = filter { it.value is T }.map { Entry(it.key, it.value ?: NULL) }.iterator()
 
     actual infix fun query(pointer: String): Any? = query(KSONPointer(pointer))
 
@@ -653,15 +651,15 @@ actual constructor(map: Map<String, Any?> = HashMap()): MutableMap<String, Any?>
      * Modification of these simultaneously modifies the placement value in
      * the [KSONObject] the originate from, regardless of mutability.
      */
-    class Entry(private val kson: KSONObject, override val key: String, value: Any): MutableMap.MutableEntry<String, Any?> {
+    inner class Entry(override val key: String, value: Any): MutableMap.MutableEntry<String, Any?> {
         override var value: Any? = value
             private set(value) { field = value ?: NULL }
             get() = if(NULL == field) null else field
 
         override fun setValue(newValue: Any?): Any? {
-            val old = value.takeIf { it != NULL }
+            val old = value.takeIf { NULL != it }
             value = newValue ?: NULL
-            kson[key] = newValue
+            this@KSONObject[key] = newValue
             return old
         }
     }
